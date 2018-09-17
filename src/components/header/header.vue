@@ -25,7 +25,11 @@
         <i class="icon-keyboard_arrow_right"></i>
       </div>
     </div>
-    <div class="bulletin-wrapper"></div>
+    <div class="bulletin-wrapper">
+      <span class="bulletin-title"></span>
+      <span class="bulletin-text">{{seller.bulletin}}</span>
+      <i class="icon-keyboard_arrow_right"></i>
+    </div>
   </div>
 </template>
 
@@ -125,9 +129,35 @@
         background : rgba(0,0,0,0.2)
         text-align : center
         .count
-          //文字和图标字体不一样，所以要垂直居中
-
+          // 文字和图标字体不一样，所以要垂直居中就先设置一下顶部对齐。
+          vertical-align : top
           font-size : 10px
         .icon-keyboard_arrow_right
+          margin-left : 2px
+          // 由于默认的linehight是1，所以导致上面设置顶部对齐以后没有达到垂直居中的效果，所以设置一下撑满的line-height
+          line-height : 24px
           font-size : 10px
+    .bulletin-wrapper
+      height : 28px
+      // 为垂直居中准备
+      line-height : 28px
+      padding : 0 22px 0 12px
+      // 不折行
+      white-space : nowrap
+      // 超出的部分隐藏
+      overflow : hidden
+      text-overflow: ellipsis
+      //两个span挨着的时候，会有个空白像素，需要去掉
+      font-size : 0
+      .bulletin-title
+        // 为了能给图片设置宽高
+        display : inline-block
+        width : 22px
+        height : 12px
+        bg-image('bulletin')
+        background-size : 22px 12px
+        background-repeat : no-repeat
+      .bulletin-text
+        font-size : 10px
+        
 </style>

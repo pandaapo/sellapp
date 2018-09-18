@@ -5,6 +5,18 @@ body, html
   font-family : 'PingFang SC','STHeitiSC-Light','Helvetica-Light', arial,
     sans-serif,
 
+//清除浮动的样式
+.clearfix
+  display : inline-block
+  // :after 选择器在被选元素的内容后面插入内容content，以及内容的样式
+  &:after
+    display : block
+    content : "."
+    height : 0
+    line-height : 0
+    clear : both
+    visibility : hidden
+
 //-webkit...是为了处理兼容性问题
 @media (-webkit-min-device-pixel-ratio: 1.5),(min-device-pixel-ratio: 1.5)
   .border-1px

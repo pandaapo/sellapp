@@ -34,32 +34,42 @@
       <img :src="seller.avatar" width="100%" height="100%">
     </div>
     <!-- 详情弹层页 -->
-    <div v-show="detailShow" class="detail">
-      <!-- 实现sticky footers布局 -->
-      <!-- clearfix用来清除浮动的，比较通用，写到base.styl中 -->
-      <div class="detail-wrapper clearfix">
-        <div class="detail-main">
-          <h1 class="name">{{seller.name}}</h1>
-          <div class="star-wrapper">
-            <star :size="48" :score="seller.score"></star>
+    <transition name="fade">
+      <div v-show="detailShow" class="detail">
+        <!-- 实现sticky footers布局 -->
+        <!-- clearfix用来清除浮动的，比较通用，写到base.styl中 -->
+        <div class="detail-wrapper clearfix">
+          <div class="detail-main">
+            <h1 class="name">{{seller.name}}</h1>
+            <div class="star-wrapper">
+              <star :size="48" :score="seller.score"></star>
+            </div>
+            <div class="title">
+              <div class="line"></div>
+              <div class="text">优惠信息</div>
+              <div class="line"></div>
+            </div>
+            <ul v-if="seller.supports" class="supports">
+              <li class="support-item" v-for="(item,index) in seller.supports">
+                <span class="icon" :class="classMap[seller.supports[index].type]"></span>
+                <span class="text">{{seller.supports[index].description}}</span>
+              </li>
+            </ul>
+            <div class="title">
+              <div class="line"></div>
+              <div class="text">商家公告</div>
+              <div class="line"></div>
+            </div>
+            <div class="bulletin">
+              <p class="content">{{seller.bulletin}}</p>
+            </div>
           </div>
-          <div class="title">
-            <div class="line"></div>
-            <div class="text">优惠信息</div>
-            <div class="line"></div>
-          </div>
-          <ul v-if="seller.supports" class="supports">
-            <li class="support-item" v-for="item in seller.supports">
-              <span class="icon" :class="classMap[seller.supports[0].type]"></span>
-              <span class="text">{{seller.supports[0].description}}</span>
-            </li>
-          </ul>
+        </div>
+        <div class="detail-close" @click="hideDetail()">
+          <i class="icon-close"></i>
         </div>
       </div>
-      <div class="detail-close">
-        <i class="icon-close"></i>
-      </div>
-    </div>
+    </transition>
   </div>
 </template>
 
@@ -82,6 +92,9 @@
     methods: {
       showDetail() {
         this.detailShow = true
+      },
+      hideDetail() {
+        this.detailShow = false
       }
     },
     created() {
@@ -243,7 +256,18 @@
       width : 100%
       height : 100%
       overflow : auto
+      // 在iPhone上可以看到背景模糊的效果
+      backdrop-filter: blur(10px)
+      // 进入动画最终状态
+      opacity : 1
       background : rgba(7, 17, 27, 0.8)
+      // 0.5s渐变时间
+      &.fade-enter-active, &.fade-leave-active
+        transition : all 0.5s
+      // 进入动画开始状态；关闭动画最终状态
+      &.fade-enter, &.fade-leave-active
+        opacity : 0
+        background : rgba(7, 17, 27, 0)
       // 包装层是为了最小高度和视窗一样高，让关闭按钮定在顶部
       .detail-wrapper
         //最小高度和视窗一样高
@@ -286,6 +310,7 @@
             .support-item
               padding: 0 12px
               margin-bottom : 12px
+              // 因为有display:inline-block，横向排列，所以去掉空白间隙
               font-size : 0
               &:last-child
                 margin-bottom : 0
@@ -308,7 +333,15 @@
                 &.special
                   bg-image('special_1')
               .text
-                line-height : 12px
+                // 与上面.icon的高度一样，才能实现垂直居中
+                line-height : 16px
+                font-size : 12px
+          .bulletin
+              width: 80%
+              margin : 0 auto
+              .content
+                padding: 0 12px
+                line-height : 24px
                 font-size : 12px
       .detail-close
         position : relative

@@ -10,6 +10,10 @@ border-1px($color)  //一个函数，需要传入颜色的参数
     border-top : 1px solid $color
     content: ''
 
+border-none()
+  &:after
+    display : none
+
 //根据不同DPI用不同尺寸图片
 bg-image($url)
   background-image : url($url + "@2x.png")

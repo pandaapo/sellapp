@@ -16,7 +16,8 @@
       </div>
     </div>
     <!-- 路由匹配到的组件将渲染在这里 -->
-    <router-view></router-view>
+    <!-- 向子组件通过props传数据 -->
+    <router-view :seller="seller"></router-view>
   </div>
 </template>
 
@@ -33,11 +34,10 @@
       }
     },
     created() {
-      this.$http.get('/api/seller').then(response => {
+      this.$http.get('/api/seller').then((response) => {
         response = response.body;
         if(response.errno === ERR_OK){
           this.seller = response.data;
-          console.log(this.seller);
         }
       })
     },

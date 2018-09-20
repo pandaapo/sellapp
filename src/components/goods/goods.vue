@@ -3,7 +3,8 @@
     <!-- v-el:food-wrapper 获取这个DOM对象 -->
     <div class="menu-wrapper" ref="menuWrapper">
       <ul>
-        <li v-for="item in goods" class="menu-item">
+        <!-- currentIndex === index，给这个li一个高亮样式current -->
+        <li v-for="(item, index) in goods" class="menu-item" :class="{'current': currentIndex === index}" @click="selectMenu(index, $event)">
           <span class="text border-1px">
             <!-- 如果item.type>0，展示出对应.icon的span -->
             <span v-show="item.type>0" class="icon" :class="classMap[item.type]"></span>{{item.name}}
@@ -13,7 +14,7 @@
     </div>
     <div class="foods-wrapper" ref="foodsWrapper">
       <ul>
-        <!-- food-list-hook是一个编程习惯，表示food-list对应元素会被js选择，并无实际样式 -->
+        <!-- food-list-hook是一个编程习惯，表示food-list对应元素会被js选择，并无实际效果 -->
         <li v-for="item in goods" class="food-list food-list-hook">
           <h1 class="title">{{item.name}}</h1>
           <ul>
@@ -38,11 +39,13 @@
         </li>
       </ul>
     </div>
+    <shopcart :delivery-price="seller.deliveryPrice" :min-price="seller.minPrice"></shopcart>
   </div>
 </template>
 
 <script type="text/ecmascript-6">
   import BScroll from "better-scroll";
+  import shopcart from "components/shopcart/shopcart"
 
   const ERR_OK = 0;
   export default {
@@ -56,7 +59,21 @@
       return {
         // 一开始goods是空，当组件被调用时，通过下面的$http.get('/api/goods')去后端获取数据
         goods: [],
-        listHeight: []
+        listHeight: [],
+        scrollY: 0
+      }
+    },
+    computed: {
+      // 当scrollY发生变化，vue的computed会重新计算
+      currentIndex() {
+        for(let i=0; i<this.listHeight.length; i++){
+          let height1 = this.listHeight[i];
+          let height2 = this.listHeight[i + 1];
+          if(!height2 || (this.scrollY >= height1 && this.scrollY < height2)) {
+            return i;
+          }
+        }
+        return 0;
       }
     },
     created() {
@@ -77,14 +94,46 @@
       })
     },
     methods: {
+      selectMenu(index, event) {
+        //教程：点击事件event，better-scroll派发的点击事件这属性是true；浏览器原生点击事件没有这个属性。实际：两种都是true
+        if(!event._constructed){  //解决浏览器点击时触发两次的问题
+          return;
+        }
+        let foodList = this.$refs.foodsWrapper.getElementsByClassName("food-list-hook");
+        let el = foodList[index]
+        //？？？疑问：这里的betterScroll的.scrollToElement方法没有自动提示。 
+        this.foodsScroll.scrollToElement(el, 300);
+      },
       _initScroll() {
         // 实例化BScroll时，需要接收一个DOM对象，一个option；this.$els.meuWrapper获取上面标记的v-el:menu-wrapper DOM对象，一个驼峰格式一个中划线格式
-        this.menuScroll = new BScroll(this.$refs.menuWrapper, {});
-        this.foodsScroll = new BScroll(this.$refs.foodsWrapper, {});
+        this.menuScroll = new BScroll(this.$refs.menuWrapper, {
+          // 教程说：不设置该属性时，左边栏无法点击。但是实际上：没设置该属性也可点击。
+          click: true
+        });
+        this.foodsScroll = new BScroll(this.$refs.foodsWrapper, {
+          //  当滚动时，能够实时地检测到滚动的位置
+          probeType: 3
+        });
+        // 让foodsScroll对象监听scroll事件
+        this.foodsScroll.on('scroll',((post) => {
+          this.scrollY = Math.abs(Math.round(post.y));
+        }))
       },
       _caculateHeight() {
-        // let foodList = this.$refs.foodsWrapper
+        let foodList = this.$refs.foodsWrapper.getElementsByClassName("food-list-hook");
+        let height = 0;
+        this.listHeight.push(height);
+        for(let i =0; i<foodList.length; i++){
+          let item = foodList[i];
+          // DOM原生的方法获取item区块的高度
+          height += item.clientHeight;
+          this.listHeight.push(height);
+        }
       }
+    },
+    components: {
+      // import组件后，注册该组件
+      shopcart
     }
   }
 </script>
@@ -117,6 +166,15 @@
         width: 56px
         padding : 0 12px
         line-height : 14px
+        &.current
+          position: relative
+          z-index : 10
+          margin-top : -1px
+          background : #fff
+          // 字体变粗
+          font-weight : 700
+          .text
+            border-none()
         .icon
           //！！！练习：这段.icon是从header组件复制过来，也可以做成单独组件
           display : inline-block
@@ -184,7 +242,7 @@
             color: rgb(147, 153, 159)
           .desc
             margin-bottom : 8px
-            // 多行的时候10px，上下行会紧挨着
+            // 占多行的时候10px，上下行会紧挨着
             line-height : 12px
           .extra
             .count

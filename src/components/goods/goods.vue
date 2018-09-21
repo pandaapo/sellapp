@@ -32,8 +32,11 @@
                 <div class="price">
                   <span class="now">￥{{food.price}}</span><span class="old" v-show="food.oldPrice">￥{{food.oldPrice}}</span>
                 </div>
+                <!-- 外面包一个cartcontrol-wrapper是因为要定位 -->
+                <div class="cartcontrol-wrapper">
+                  <cartcontrol :food="food"></cartcontrol>
+                </div>
               </div>
-              <div></div>
             </li>
           </ul>
         </li>
@@ -46,6 +49,7 @@
 <script type="text/ecmascript-6">
   import BScroll from "better-scroll";
   import shopcart from "components/shopcart/shopcart"
+  import cartcontrol from 'components/cartcontrol/cartcontrol'
 
   const ERR_OK = 0;
   export default {
@@ -111,6 +115,7 @@
           click: true
         });
         this.foodsScroll = new BScroll(this.$refs.foodsWrapper, {
+          click: true,
           //  当滚动时，能够实时地检测到滚动的位置
           probeType: 3
         });
@@ -133,7 +138,8 @@
     },
     components: {
       // import组件后，注册该组件
-      shopcart
+      shopcart,
+      cartcontrol
     }
   }
 </script>
@@ -258,4 +264,8 @@
               text-decoration : line-through
               font-size: 10px
               color: rgb(147, 153, 159)
+          .cartcontrol-wrapper
+            position : absolute
+            right : 0
+            bottom : 12px
 </style>

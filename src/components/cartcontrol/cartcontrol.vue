@@ -1,7 +1,7 @@
 <template>
   <div class="cartcontrol">
       <transition name="move">
-        <div class="cart-decrease" v-show="food.count>0" @click="decreaseCart" transition="move">
+        <div class="cart-decrease" v-show="food.count>0" @click="decreaseCart">
           <!-- 实现平移 -->
           <span class="inner icon-remove_circle_outline"></span>
           <!-- 实现滚动 -->
@@ -35,6 +35,8 @@
         } else {
           this.food.count++;
         }
+        //提交名为'cart-add'的事件给父组件，实现<添加按钮>图标的DOM元素传给父组件
+        this.$emit('cart-add', event.target);
       },
       decreaseCart() {
         if(this.food.count){
@@ -54,20 +56,25 @@
       padding : 6px
       // ？？？疑问：transition的属性值实现什么效果
       transition : all 0.4s linear
-      // 动画完成时，vue会给动画加上move-transition的样式
-      &.move-transition
-        opacity : 1
-        // 通过translate3d css实现硬件加速，让动画更流畅一些。
-        transform : translate3d(0,0,0)
+      // &.move-transition  //教程中说：动画完成时，vue会给动画加上move-transition的样式。但实际上并没看到move-transition样式
+      opacity : 1
+      // 通过translate3d css实现硬件加速，让动画更流畅一些。
+      transform : translate3d(0,0,0)
       .inner
+        // 设置display : inline-block才有宽高，滚动的动画才能实现
+        display : inline-block
         line-height : 24px
         font-size : 24px
         color : rgb(0, 160, 220)
+        transition : all 0.4s linear
+        transform : rotate(0)
       // 外层，动画开始和结束时候的样式
-      &.move-enter,&.move-leave
+      &.move-enter,&.move-leave-active
         opacity : 0
-        // ？？？疑问：滚动到右侧？
+        // -图标从x坐标24px滚动到右侧
         transform : translate3d(24px, 0, 0)
+        .inner
+          transform : rotate(180deg)
     .cart-count
       display : inline-block
       vertical-align : top

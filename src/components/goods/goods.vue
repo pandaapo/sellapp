@@ -34,7 +34,8 @@
                 </div>
                 <!-- 外面包一个cartcontrol-wrapper是因为要定位 -->
                 <div class="cartcontrol-wrapper">
-                  <cartcontrol :food="food"></cartcontrol>
+                  <!-- 监听传来的cart-add事件,监听到就调用cartAdd()函数 -->
+                  <cartcontrol :food="food" v-on:cart-add="cartAdd"></cartcontrol>
                 </div>
               </div>
             </li>
@@ -42,7 +43,7 @@
         </li>
       </ul>
     </div>
-    <shopcart :delivery-price="seller.deliveryPrice" :min-price="seller.minPrice"></shopcart>
+    <shopcart ref="shopcart" :select-foods="selectFoods" :delivery-price="seller.deliveryPrice" :min-price="seller.minPrice"></shopcart>
   </div>
 </template>
 
@@ -78,6 +79,18 @@
           }
         }
         return 0;
+      },
+      selectFoods() {
+        let foods = [];
+        this.goods.forEach((good) => {
+          good.foods.forEach((food) => {
+            //food如果有count的话，表示是被选择的
+            if(food.count) {
+              foods.push(food);
+            }
+          });
+        });
+        return foods;
       }
     },
     created() {
@@ -134,6 +147,13 @@
           height += item.clientHeight;
           this.listHeight.push(height);
         }
+      },
+      cartAdd(el) {
+        // dom元素更新后执行， 因此此处能正确打印出更改之后的值；
+        this.$nextTick(() => {
+          // 调用shopcart组件的drop()函数
+          this.$refs['shopcart'].drop(el);
+        });
       }
     },
     components: {

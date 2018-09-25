@@ -20,7 +20,19 @@
                 {{payDesc}}
             </div>
         </div>
-    </div>   
+    </div>
+    <!-- ？？？疑问：要放若干个小球。 -->
+    <div class="ball-container">
+        <!-- ？？？疑问：这里transition的使用为什么就突出要求和v-show配合使用 -->
+        <div v-for="ball in balls">
+            <transition name="drop" v-on:before-enter="beforeDrop" v-on:enter="dropping" v-on:after-enter="afterDrop">
+                <!-- 因为小球有两个方向的改变，所以需要两个div。仅用于js选择的样式加上xxx-hook。 -->
+                <div v-show="ball.show" class="ball">
+                    <div class="inner inner-hook"></div>
+                </div>
+            </transition>
+        </div>
+    </div>
   </div>
 </template>
 
@@ -47,6 +59,29 @@
             minPrice: {
                 type: Number,
                 default: 0
+            }
+        },
+        data() {
+            return {
+                //维护当前小球的状态，5个差不多够了
+                balls: [
+                    {
+                        show: false
+                    },
+                    {
+                        show: false
+                    },
+                    {
+                        show: false
+                    },
+                    {
+                        show: false
+                    },
+                    {
+                        show: false
+                    }
+                ],
+                dropBalls: []
             }
         },
         computed: {
@@ -84,6 +119,63 @@
                     return 'not-enough';
                 } else {
                     return 'enough';
+                }
+            }
+        },
+        methods: {
+            // el是通过父组件goods.vue拿到cartcontrol组件的DOM元素
+            drop(el){
+                // 找一个隐藏的小球，添加到dropBalls中
+                for(let i=0; i<this.balls.length; i++){
+                    let ball = this.balls[i];
+                    if(!ball.show){
+                        ball.show = true;
+                        //定义一个el属性保存传入的el
+                        ball.el = el;
+                        this.dropBalls.push(ball);
+                        return;
+                    }
+                }
+            },
+            beforeDrop(el) {
+                let count = this.balls.length;
+                while(count--) {
+                    let ball = this.balls[count];
+                    if(ball.show){
+                        let rect = ball.el.getBoundingClientRect();
+                        let x = rect.left - 32;
+                        let y = -(window.innerHeight - rect.top - 22);
+                        // ？？？疑问：ball不已经是true了吗，为什么还要设置显示
+                        el.style.display = '';
+                        el.style.webkitTransform = `translate3d(0, ${y}px, 0)`;
+                        el.style.transform = `translate3d(0, ${y}px, 0)`;
+                        // 横向的动画
+                        let inner = el.getElementsByClassName('inner-hook')[0];
+                        inner.style.webkitTransform = `translate3d(${x}px, 0, 0)`;
+                        inner.style.transform = `translate3d(${x}px, 0, 0)`;
+                    }
+                }
+            },
+            dropping(el, done) {
+                //让eslint跳过对rf变量未使用的验证
+                /* eslint-disable no-unused-vars */
+                //重绘
+                let rf = el.offsetHeight;
+                this.$nextTick(() => {
+                    el.style.webkitTransform = 'translate3d(0, 0, 0)';
+                    el.style.transform = 'translate3d(0, 0, 0)';
+                    let inner = el.getElementsByClassName('inner-hook')[0];
+                    inner.style.webkitTransform = 'translate3d(0, 0, 0)';
+                    inner.style.transform = 'translate3d(0, 0, 0)';
+                    //done 是告诉vue该动画结束。transition动画结束以后，会有一个transitionend事件的派发
+                    el.addEventListener('transitionend', done);
+                });
+            },
+            afterDrop(el) {
+                let ball = this.dropBalls.shift();
+                if(ball){
+                    ball.show = false;
+                    el.style.display = 'none';
                 }
             }
         }
@@ -196,4 +288,21 @@
                         background : #00b43c
                         // 前景色
                         color: #fff
+        .ball-container
+            .ball
+                //因为是相对于视窗做的动画，所以是fixed
+                position: fixed
+                left: 32px
+                bottom : 22px
+                z-index: 200
+                &.drop-transition
+                    transition : all 0.4s
+                    // 小球
+                    .inner
+                        width : 16px
+                        height : 16px
+                        // 圆
+                        border-radius : 50%
+                        background : rgb(0, 160, 220)
+                        transition : all 0.4s
 </style>

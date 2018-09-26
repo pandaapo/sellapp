@@ -1,42 +1,80 @@
 <template>
-  <div class="shopcart">
-    <div class="content">
-        <div class="content-left">
-            <div class="logo-wrapper">
-                <!-- 当totalCount>0时，加一个样式。 样式的属性值是个对象-->
-                <div class="logo" :class="{'highlight':totalCount>0}">
-                    <span class="icon-shopping_cart" :class="{'highlight':totalCount>0}"></span>
+    <div>
+        <div class="shopcart">
+            <!-- 绑定toggleList事件，用于控制购物车详情页的折叠和展开 -->
+            <div class="content" @click="toggleList">
+                <div class="content-left">
+                    <div class="logo-wrapper">
+                        <!-- 当totalCount>0时，加一个样式。 样式的属性值是个对象-->
+                        <div class="logo" :class="{'highlight':totalCount>0}">
+                            <span class="icon-shopping_cart" :class="{'highlight':totalCount>0}"></span>
+                        </div>
+                        <!-- v-show支持表达式 -->
+                        <div class="num" v-show="totalCount>0">{{totalCount}}</div>
+                    </div>
+                    <div class="price" :class="{'highlight':totalPrice>0}">￥{{totalPrice}}</div>
+                    <div class="desc">另需配送费￥{{deliveryPrice}}</div>
                 </div>
-                <!-- v-show支持表达式 -->
-                <div class="num" v-show="totalCount>0">{{totalCount}}</div>
+                <!-- .stop.prevent是vue提供的方法阻止事件冒泡：防止点击去结算的时候弹出购物车详情页面 -->
+                <!-- ？？？疑问：什么是事件冒泡 -->
+                <div class="content-right" @click.stop.prevent="pay">
+                    <!-- vue可以对class绑定一个变量，例如这里的payClass，一个计算属性 -->
+                    <div class="pay" :class="payClass">
+                        <!-- 绑定动态的变量 -->
+                        {{payDesc}}
+                    </div>
+                </div>
             </div>
-            <div class="price" :class="{'highlight':totalPrice>0}">￥{{totalPrice}}</div>
-            <div class="desc">另需配送费￥{{deliveryPrice}}</div>
-        </div>
-        <div class="content-right">
-            <!-- vue可以对class绑定一个变量，例如这里的payClass，一个计算属性 -->
-            <div class="pay" :class="payClass">
-                <!-- 绑定动态的变量 -->
-                {{payDesc}}
+            <!-- ？？？疑问：要放若干个小球。 -->
+            <div class="ball-container">
+                <!-- ？？？疑问：这里transition的使用为什么就突出要求和v-show配合使用 -->
+                <div v-for="ball in balls">
+                    <!-- 给transition绑定三个事件 -->
+                    <transition name="drop" v-on:before-enter="beforeDrop" v-on:enter="dropping" v-on:after-enter="afterDrop">
+                        <!-- 因为小球有两个方向的改变，所以需要两个div。仅用于js选择的样式加上xxx-hook。 -->
+                        <div v-show="ball.show" class="ball">
+                            <div class="inner inner-hook"></div>
+                        </div>
+                    </transition>
+                </div>
             </div>
-        </div>
-    </div>
-    <!-- ？？？疑问：要放若干个小球。 -->
-    <div class="ball-container">
-        <!-- ？？？疑问：这里transition的使用为什么就突出要求和v-show配合使用 -->
-        <div v-for="ball in balls">
-            <transition name="drop" v-on:before-enter="beforeDrop" v-on:enter="dropping" v-on:after-enter="afterDrop">
-                <!-- 因为小球有两个方向的改变，所以需要两个div。仅用于js选择的样式加上xxx-hook。 -->
-                <div v-show="ball.show" class="ball">
-                    <div class="inner inner-hook"></div>
+            <!-- 购物车详情页，通过listShow变量来控制显示或隐藏 -->
+            <!-- 折叠和展开时加上缓动的动画 -->
+            <transition name="fold">
+                <div class="shopcart-list" v-show="listShow">
+                    <div class="list-header">
+                        <div class="title">购物车</div>
+                        <!-- 绑定click事件，方法在methods中定义 -->
+                        <div class="empty" @click="empty">清空</div>
+                    </div>
+                    <div class="list-content" ref="listContent">
+                        <ul>
+                            <li class="food" v-for="food in selectFoods">
+                                <span class="name">{{food.name}}</span>
+                                <div class="price">
+                                    <span>￥{{food.price*food.count}}</span>
+                                </div>
+                                <div class="cartcontrol-wrapper">
+                                    <cartcontrol :food="food" v-on:cart-add="drop"></cartcontrol>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </transition>
         </div>
+        <!-- 因为半透明背景是相对整个屏幕定位，所以与shopcart平级 -->
+        <transition name="fade">
+            <!-- 绑定事件，实现点击半透明区域，收起购物车详情页 -->
+            <div class="list-mask" v-show="listShow" @click="hideList"></div>
+        </transition>
     </div>
-  </div>
 </template>
 
 <script type="text/ecmascript-6">
+    import cartcontrol from 'components/cartcontrol/cartcontrol';
+    import BScroll from "better-scroll"
+
     export default {
         // 几个计算属性全都依赖于传入的参数selectFoods
         // vue的编程风格：props接收数据时，一定要指定数据类型，还可以附上默认值
@@ -81,7 +119,9 @@
                         show: false
                     }
                 ],
-                dropBalls: []
+                dropBalls: [],
+                // 该变量用于控制购物车详情页是折叠还是展开
+                fold: true
             }
         },
         computed: {
@@ -120,6 +160,27 @@
                 } else {
                     return 'enough';
                 }
+            },
+            listShow() {
+                if(!this.totalCount){
+                    this.fold = true;
+                    return false;
+                }
+                let show = !this.fold;
+                if(show){
+                    // 对购物车详情列表做初始化。数据变化以后再更新DOM
+                    this.$nextTick(() => {
+                        if(!this.scroll){
+                            // 需要把list-content的DOM传入
+                            this.scroll = new BScroll(this.$refs.listContent, {
+                                click: true
+                            });
+                        } else {
+                            this.scroll.refresh();
+                        }
+                    });
+                }
+                return show;
             }
         },
         methods: {
@@ -137,11 +198,14 @@
                     }
                 }
             },
+            // el是当前执行动画的DOM对象
+            // 获取到所有为true小球
             beforeDrop(el) {
                 let count = this.balls.length;
                 while(count--) {
                     let ball = this.balls[count];
                     if(ball.show){
+                        // 浏览器提供的接口，获取ball中保存的小球的位置
                         let rect = ball.el.getBoundingClientRect();
                         let x = rect.left - 32;
                         let y = -(window.innerHeight - rect.top - 22);
@@ -159,29 +223,59 @@
             dropping(el, done) {
                 //让eslint跳过对rf变量未使用的验证
                 /* eslint-disable no-unused-vars */
-                //重绘
+                //主动进行浏览器重绘
                 let rf = el.offsetHeight;
+                // 让动画在下一帧进行如下操作
                 this.$nextTick(() => {
                     el.style.webkitTransform = 'translate3d(0, 0, 0)';
                     el.style.transform = 'translate3d(0, 0, 0)';
                     let inner = el.getElementsByClassName('inner-hook')[0];
                     inner.style.webkitTransform = 'translate3d(0, 0, 0)';
                     inner.style.transform = 'translate3d(0, 0, 0)';
-                    //done 是告诉vue该动画结束。transition动画结束以后，会有一个transitionend事件的派发
+                    //done 是告诉vue该动画结束，然后跳到下一个钩子函数afterDrop()。transition动画结束以后，会有一个css事件（transitionend事件）的派发。在该事件执行的时候，调用done
                     el.addEventListener('transitionend', done);
                 });
             },
             afterDrop(el) {
+                // 动画结束以后，将ball置为false。让这个ball可以继续被使用
+                //？？？疑问：shift()取dropBalls的是哪个？
                 let ball = this.dropBalls.shift();
                 if(ball){
                     ball.show = false;
                     el.style.display = 'none';
                 }
+            },
+            toggleList() {
+                if(!this.totalCount){
+                    return;
+                }
+                this.fold = !this.fold;
+            },
+            hideList() {
+                // this.fold会触发依赖于此的listShow的重新计算
+                this.fold = true;
+            },
+            empty() {
+                this.selectFoods.forEach((food) => {
+                    food.count = 0;
+                });
+            },
+            // 去结算
+            pay() {
+                if(this.totalPrice<this.minPrice){
+                    return;
+                }
+                window.alert(`支付￥${this.totalPrice}`)
             }
+        },
+        components: {
+            cartcontrol
         }
     }
 </script>
 <style lang="stylus" rel="stylesheet/stylus" scoped>
+    @import "../../common/stylus/mixin";
+
     .shopcart
         // 自适应
         position : fixed
@@ -295,14 +389,90 @@
                 left: 32px
                 bottom : 22px
                 z-index: 200
-                &.drop-transition
-                    transition : all 0.4s
-                    // 小球
-                    .inner
-                        width : 16px
-                        height : 16px
-                        // 圆
-                        border-radius : 50%
-                        background : rgb(0, 160, 220)
-                        transition : all 0.4s
+                // 教程中的“&.drop-transition”会导致动画失效
+                //y轴沿着该抛物线轨迹缓动
+                transition : all 0.4s cubic-bezier(0.49, -0.29, 0.75, 0.41)
+                // 小球
+                .inner
+                    width : 16px
+                    height : 16px
+                    // 圆
+                    border-radius : 50%
+                    background : rgb(0, 160, 220)
+                    // x轴线性缓动
+                    transition : all 0.4s linear
+        // 购物车详情页样式
+        .shopcart-list
+            position : absolute
+            // 相对shopcart的定位
+            left: 0
+            top: 0
+            z-index : -1
+            width: 100%
+            transition: all 0.5s
+            // ？？？疑问：让不定高的整个高度展开：y轴-100%。
+            transform: translate3d(0, -100%, 0)
+            &.fold-enter, &.fold-leave-active
+                transform : translate3d(0, 0, 0)
+            .list-header
+                height : 40px
+                // 垂直居中对齐line-height=height
+                line-height : 40px
+                padding: 0 18px
+                background : #f3f5f7
+                border-bottom : 1px solid rgba(7, 17, 27, 0.1)
+                .title
+                    float : left
+                    font-size : 14px
+                    color: rgb(7, 17, 27)
+                .empty
+                    float : right
+                    font-size : 12px
+                    color: rgb(0, 160, 220)
+            .list-content
+                padding : 0 18px
+                max-height : 217px
+                // 超过最大高度时隐藏
+                overflow : hidden
+                background : #fff
+                .food
+                    position : relative
+                    padding: 12px 0
+                    box-sizing : border-box
+                    border-1px(rgba(7, 17, 27, 0.1))
+                    .name
+                        line-height : 24px
+                        font-size : 14px
+                        color: rgb(7, 17, 27)
+                    .price
+                        position : absolute
+                        right : 90px
+                        bottom : 12px
+                        line-height : 24px
+                        font-size : 14px
+                        font-weight : 700
+                        color: rgb(240, 20, 20)
+                    .cartcontrol-wrapper
+                        position : absolute
+                        right : 0
+                        bottom : 6px
+    // 半透明的背景样式
+    .list-mask
+        // 相对窗口定位
+        position: fixed
+        top: 0
+        left: 0
+        width : 100%
+        height : 100%
+        // 要小于.shopcart的z-index
+        z-index : 40
+        // iPhone手机下能看到模糊的效果
+        backdrop-filter: blur(10px)
+        // 缓动
+        transition: all 0.5s
+        opacity : 1
+        background : rgba(7, 17, 27, 0.6)
+        &.fade-enter, &.fade-leave-active
+            opacity : 0
+            background : rgba(7, 17, 27, 0)
 </style>

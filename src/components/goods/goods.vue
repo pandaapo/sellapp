@@ -121,6 +121,13 @@
         //？？？疑问：这里的betterScroll的.scrollToElement方法没有自动提示。 
         this.foodsScroll.scrollToElement(el, 300);
       },
+      cartAdd(el) {
+        // 体验优化：异步执行下落动画。为了解决添加按钮动画和小球动画同时进行的细微卡顿问题，让drop的动画晚点执行
+        this.$nextTick(() => {
+          // 调用shopcart组件的drop()函数
+          this.$refs['shopcart'].drop(el);
+        });
+      },
       _initScroll() {
         // 实例化BScroll时，需要接收一个DOM对象，一个option；this.$els.meuWrapper获取上面标记的v-el:menu-wrapper DOM对象，一个驼峰格式一个中划线格式
         this.menuScroll = new BScroll(this.$refs.menuWrapper, {
@@ -147,13 +154,6 @@
           height += item.clientHeight;
           this.listHeight.push(height);
         }
-      },
-      cartAdd(el) {
-        // dom元素更新后执行， 因此此处能正确打印出更改之后的值；
-        this.$nextTick(() => {
-          // 调用shopcart组件的drop()函数
-          this.$refs['shopcart'].drop(el);
-        });
       }
     },
     components: {

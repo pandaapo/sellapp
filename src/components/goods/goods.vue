@@ -18,7 +18,8 @@
         <li v-for="item in goods" class="food-list food-list-hook">
           <h1 class="title">{{item.name}}</h1>
           <ul>
-            <li v-for="food in item.foods" class="food-item border-1px">
+            <!-- ？？？疑问：$event的作用 -->
+            <li @click="selectFood(food, $event)" v-for="food in item.foods" class="food-item border-1px">
               <div class="icon">
                 <!-- ？？？疑问：:src 是什么用法？ -->
                 <img width="57" height="57" :src="food.icon">
@@ -44,6 +45,8 @@
       </ul>
     </div>
     <shopcart ref="shopcart" :select-foods="selectFoods" :delivery-price="seller.deliveryPrice" :min-price="seller.minPrice"></shopcart>
+    <!-- 传入food -->
+    <food :food="selectedFood"></food>
   </div>
 </template>
 
@@ -51,6 +54,7 @@
   import BScroll from "better-scroll";
   import shopcart from "components/shopcart/shopcart"
   import cartcontrol from 'components/cartcontrol/cartcontrol'
+  import food from "components/food/food"
 
   const ERR_OK = 0;
   export default {
@@ -61,11 +65,13 @@
       }
     },
     data() {
+      // 这里观测的数据变量名不能和method中的方法名重名，因为都可以通过this.来访问。
       return {
         // 一开始goods是空，当组件被调用时，通过下面的$http.get('/api/goods')去后端获取数据
         goods: [],
         listHeight: [],
-        scrollY: 0
+        scrollY: 0,
+        selectedFood: {}
       }
     },
     computed: {
@@ -154,12 +160,19 @@
           height += item.clientHeight;
           this.listHeight.push(height);
         }
+      },
+      selectFood(food, event) {
+        if(!event._constructed){  //解决浏览器点击时触发两次的问题
+          return;
+        }
+        this.selectedFood = food;
       }
     },
     components: {
       // import组件后，注册该组件
       shopcart,
-      cartcontrol
+      cartcontrol,
+      food
     }
   }
 </script>

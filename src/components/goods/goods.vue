@@ -46,7 +46,8 @@
     </div>
     <shopcart ref="shopcart" :select-foods="selectFoods" :delivery-price="seller.deliveryPrice" :min-price="seller.minPrice"></shopcart>
     <!-- 传入food -->
-    <food :food="selectedFood"></food>
+    <!-- 调用子组件的方法，这里ref="food"，methods中this.$refs.food.show()，监听传来的cart-add事件,监听到就调用cartAdd()函数 -->
+    <food :food="selectedFood" ref="food" v-on:cart-add="cartAdd"></food>
   </div>
 </template>
 
@@ -128,6 +129,7 @@
         this.foodsScroll.scrollToElement(el, 300);
       },
       cartAdd(el) {
+        console.info("goods.vue监听到cart-add事件，调用cartAdd()方法--->");
         // 体验优化：异步执行下落动画。为了解决添加按钮动画和小球动画同时进行的细微卡顿问题，让drop的动画晚点执行
         this.$nextTick(() => {
           // 调用shopcart组件的drop()函数
@@ -166,6 +168,7 @@
           return;
         }
         this.selectedFood = food;
+        this.$refs.food.show();
       }
     },
     components: {

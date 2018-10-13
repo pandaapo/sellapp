@@ -37,8 +37,25 @@
             <split></split>
             <div class="rating">
                 <h1 class="title">商品评价</h1>
+                <!-- @select @toggle是监听该子组件派发的两个事件 -->
                 <!-- 这里必须使用驼峰转中划线 -->
-                <ratingselect v-bind:select-type="selectType" v-bind:only-content="onlyContent" v-bind:desc="desc" v-bind:ratings="food.ratings"></ratingselect>
+                <ratingselect @selectEvent="selectRating" @toggleEvent="toggleContent" v-bind:select-type="selectType" v-bind:only-content="onlyContent" v-bind:desc="desc" v-bind:ratings="food.ratings"></ratingselect>
+                <div class="rating-wrapper">
+                    <ul v-show="food.ratings && food.ratings.length">
+                        <!-- v-show一般绑定对象、属性，这里还可以绑定一个函数的返回值 -->
+                        <li v-show="needShow(rating.rateType, rating.text)" v-for="rating in food.ratings" class="rating-item border-1px">
+                            <div class="user">
+                                <span class="name">{{rating.username}}</span>
+                                <img class="avatar" width="12" height="12" :src="rating.avatar"></img>
+                            </div>
+                            <div class="time">{{rating.rateTime | formatDate}}</div>
+                            <p class="text">
+                                <span :class="{'icon-thumb_up':rating.rateType===0,'icon-thumb_down':rating.rateType===1}"></span>{{rating.text}}
+                            </p>
+                        </li>
+                    </ul>
+                    <div class="no-rating" v-show="!food.ratings || !food.ratings.length">暂无评价</div>
+                </div>
             </div>
         </div>
     </div>
@@ -51,7 +68,10 @@
   import cartcontrol from 'components/cartcontrol/cartcontrol'
   import Vue from 'vue'
   import split from 'components/split/split';
-  import ratingselect from 'components/ratingselect/ratingselect'
+//   不带花括号，是export default
+  import ratingselect from 'components/ratingselect/ratingselect';
+//   带花括号，是export function()
+  import {formatDate} from 'common/js/date'
 
   const POSITIVE = 0;
   const NEGATIVE = 1;
@@ -113,16 +133,47 @@
             console.info("food.vue监听到cart-add事件，调用foodCartAdd()方法--->");
             console.info("food.vue的cartcontrol向父组件派发cart-add事件--->");
             this.$emit('cart-add', el);
+        },
+        needShow(type, text) {
+            if(this.onlyContent && !text){
+                return false;
+            }
+            if(this.selectType === ALL){
+                return true;
+            } else {
+                return type === this.selectType;
+            }
+        },
+        selectRating(type) {
+            this.selectType = type;
+            this.$nextTick(() => {
+                this.scroll.refresh();
+            });
+        },
+        toggleContent() {
+            this.onlyContent = !this.onlyContent;
+            this.$nextTick(() => {
+                this.scroll.refresh();
+            });
         }
     },
     components: {
         cartcontrol,
         split,
         ratingselect
+    },
+    filters: {
+        formatDate(time) {
+            // 将时间戳转化成Date类型的对象
+            let date = new Date(time);
+            return formatDate(date, "yyyy-MM-dd HH:mm");
+        }
     }
   }
 </script>
 <style lang="stylus" rel="stylesheet/stylus" scoped>
+    @import "../../common/stylus/mixin.styl"
+
     .food
         // 相对于屏幕定位：占满了整个屏幕
         position : fixed
@@ -240,4 +291,45 @@
                 margin-left : 18px
                 font-size : 14px
                 color: rgb(7, 17,27)
+            .rating-wrapper
+                padding : 0 18px
+                .rating-item
+                    position : relative
+                    padding : 16px 0
+                    border-1px(rgba(7, 17, 27, 0.1))
+                    .user
+                        position : absolute
+                        right : 0
+                        top: 16px
+                        line-height : 12px
+                        font-size : 0
+                        .name
+                            display : inline-block
+                            margin-right : 6px
+                            vertical-align : top
+                            font-size: 10px
+                            color: rgb(147, 153, 159)
+                        .avatar
+                            border-radius : 50%
+                    .time
+                        margin-bottom : 6px
+                        line-height : 12px
+                        font-size: 10px
+                        color: rgb(147, 153, 159)
+                    .text
+                        line-height : 16px
+                        font-size: 12px
+                        color: rgb(7, 17, 27)
+                        .icon-thumb_up, .icon-thumb_down
+                            margin-right : 4px
+                            line-height : 16px
+                            font-size: 12px
+                        .icon-thumb_up
+                            color: rgb(0, 160, 220)
+                        .icon-thumb_down
+                            color: rgb(147, 153, 159)
+                .no-rating
+                    padding: 16px 0
+                    font-size : 12px
+                    color: rgb(147, 153, 159)
 </style>

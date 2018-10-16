@@ -98,7 +98,7 @@ export default {
                 width : 10px
                 height : 10px
                 margin-right : 3px
-                background-size : 10px 1510px
+                background-size : 10px 10px
                 // 用:last-child选择器，将最后一个星右边的margin-right设为0
                 &:last-child
                     margin-right : 0

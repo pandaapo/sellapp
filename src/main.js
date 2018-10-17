@@ -43,5 +43,5 @@ new Vue({
   template: '<App/>'
 }).$mount('#app')   //这个.$mount('#app')等价于在Vue({})里面些el: '#app'
 
-//默认访问该路径
-router.push("/goods")
+// //默认访问该路径。不去掉这个默认路径，在seller组件的BScroll初始化会有问题，在？？？也有问题
+// router.push("/goods")

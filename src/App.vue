@@ -17,12 +17,16 @@
     </div>
     <!-- 路由匹配到的组件将渲染在这里 -->
     <!-- 向子组件通过props传数据 -->
-    <router-view :seller="seller"></router-view>
+    <!-- keep-alive 优化组件的加载 -->
+    <keep-alive>
+      <router-view :seller="seller"></router-view>
+    </keep-alive>
   </div>
 </template>
 
 <script>
   import header from "./components/header/header"
+  import {urlParse} from 'common/js/util.js'
 
   //状态码。增加代码的语义和可维护性
   const ERR_OK = 0;
@@ -30,14 +34,21 @@
   export default {
     data() {
       return {
-        seller: {}
+        seller: {
+          // 立即执行函数，获取url中id参数值
+          id: (() => {
+            let quertParam = urlParse();
+            return quertParam.id;
+          })()
+        }
       }
     },
     created() {
-      this.$http.get('/api/seller').then((response) => {
+      this.$http.get('/api/seller?id=' + this.seller.id).then((response) => {
         response = response.body;
         if(response.errno === ERR_OK){
-          this.seller = response.data;
+          // vue官方推荐扩展属性的方法，第一个参数：最终返回结果，第二个参数{id：**}，第三个参数response.data
+          this.seller = Object.assign({}, this.seller, response.data);
         }
       })
     },

@@ -29,6 +29,11 @@
             </div>
           </li>
         </ul>
+        <div class="favorite" @click="toggleFavorite">
+          <!-- active样式根据favorite变化而变化 -->
+          <span class="icon-favorite" :class="{'active': favorite}"></span>
+          <span class="text">{{favoriteText}}</span>
+        </div>
       </div>
       <split></split>
       <div class="bulletin">
@@ -43,6 +48,24 @@
           </li>
         </ul>
       </div>
+      <split></split>
+      <div class="pics">
+        <h1 class="title">商家实景</h1>
+        <div class="pic-wrapper" ref="picWrapper">
+          <ul class="pic-list" ref="picList">
+            <li class="pic-item" v-for="pic in seller.pics">
+              <img :src="pic" width="120" height="90">
+            </li>
+          </ul>
+        </div>
+      </div>
+      <split></split>
+      <div class="info">
+        <h1 class="title border-1px">商家信息</h1>
+        <ul>
+          <li class="info-item" v-for="info in seller.infos">{{info}}</li>
+        </ul>
+      </div>
     </div>
   </div>
 </template>
@@ -51,12 +74,27 @@
   import star from 'components/star/star';
   import split from 'components/split/split'
   import BScroll from 'better-scroll'
+  import {saveToLocal, loadFromLocal} from 'common/js/store'
 
   export default {
     // 在App.vue中通过router-view传入了seller
     props: {
       seller: {
         type: Object
+      }
+    },
+    data() {
+      return {
+        // favorite: false，不默认写死，从js缓存中读取
+        favorite: (() => {
+          return loadFromLocal(this.seller.id, 'favorite', false);
+        })()
+      }
+    },
+    computed: {
+      // favoriteText文案根据favorite的变化而变化
+      favoriteText() {
+        return this.favorite ? '已收藏': '收藏'
       }
     },
     components: {
@@ -69,24 +107,56 @@
     watch: {
       // 观测seller的变化
       'seller'() {
-
+        this._initScroll();
+        this._initPics();
       }
     },
-    // vue生命周期中ready表示DOM已经渲染
-    ready() {
-      // 由于seller获取的是异步的，这是seller是空的
-      // BScroll的两个参数，第一个是DOM，第二是使移动端能click
-      this.scroll = new BScroll(this.$refs.seller, {
-        click: true
-      })
+    // vue生命周期中mounted表示DOM已经渲染。比seller的变化优先执行
+    mounted() {
+      // // 由于seller获取的是异步的，这是seller是空的。所以这里初始化BScroll无效
+      // this.scroll = new BScroll(this.$refs.seller, {
+      //   click: true
+      // });
+      this._initScroll();
+      this._initPics();
     },
     methods: {
       _initScroll() {
         if(!this.scroll){
+           // BScroll的两个参数，第一个是DOM，第二是使移动端能click
           this.scroll = new BScroll(this.$refs.seller, {
             click: true
           });
+        } else {
+          this.scroll.refresh();
         }
+      },
+      _initPics() {
+        if(this.seller.pics){
+          let picWidth = 120;
+          let margin = 6;
+          let width = (picWidth + margin)*this.seller.pics.length - margin;
+          this.$refs.picList.style.width = width + "px";
+          this.$nextTick(() => {
+            if(!this.picScroll){
+              this.picScroll = new BScroll(this.$refs.picWrapper, {
+                // 横向滚动
+                scrollX: true,
+                // 横向滚动时忽略纵向滚动
+                eventPassthrough: 'vertical'
+              })
+            } else {
+              this.picScroll.refresh();
+            }
+          })
+        }
+      },
+      toggleFavorite(event) {
+        if(!event._constructed){
+          return;
+        }
+        this.favorite = !this.favorite;
+        saveToLocal(this.seller.id, 'favorite', this.favorite);
       }
     }
   }
@@ -104,6 +174,8 @@
     width : 100%
     overflow: hidden
     .overview
+      // 因为收藏按钮是相对于overview定位的，所有给overview position: relative
+      position: relative
       padding : 18px
       .title
         margin-bottom : 8px
@@ -147,6 +219,26 @@
             color: rgb(7, 17, 27)
             .stress
               font-size : 24px
+      .favorite
+        position : absolute
+        width : 50px
+        right : 11px
+        top: 18px
+        text-align : center
+        .icon-favorite
+          //独占一行
+          display : block
+          margin-bottom : 4px
+          line-height : 24px
+          font-size : 24px
+          color: #d4d6d9
+          // .active时，红色
+          &.active
+            color: rgb(240, 20, 20)
+        .text
+          line-height : 10px
+          font-size : 10px
+          color: rgb(77, 85, 93)
     .bulletin
       padding: 18px 18px 0 18px
       .title
@@ -166,6 +258,9 @@
           padding : 16px 12px
           border-1px(rgba(7, 17, 27, 0.1))
           font-size : 0
+          // 因为最后一项没有border，所以加一个选择器&:last-child来处理最后一项
+          &:last-child
+            border-none()
           // 这个小图标也可以组件化
           .icon
             //是图片，所以要用inline-block
@@ -190,4 +285,41 @@
             line-height : 16px
             font-size : 12px
             color: rgb(7, 17, 27)
+    .pics
+      padding: 18px
+      .title
+        margin-bottom : 12px
+        line-height : 14px
+        color: rgb(7, 17, 27)
+        font-size : 14px
+      // 用pic-wrapper包装ul，是因为要实现超宽滚动需要外层pic-wrapper来固定视口大小
+      .pic-wrapper
+        width: 100%
+        overflow: hidden
+        // 不折行
+        white-space: nowrap
+        .pic-list
+          // 去掉横向排列的间隙
+          font-size : 0
+          .pic-item
+            display : inline-block
+            margin-right : 6px
+            width : 120px
+            height : 90px
+            &:last-child
+              margin : 0
+    .info
+      padding : 18px 18px 0 18px
+      color: rgb(7, 17, 27)
+      .title
+        padding-bottom : 12px
+        line-height : 14px
+        border-1px(rgba(7, 17, 27, 0.1))
+        font-size : 14px
+      .info-item
+        padding : 16px 12px
+        line-height : 16px
+        border-1px(rgba(7, 17, 27, 0.1))
+        &:last-child
+          border-none
 </style>
